@@ -6,7 +6,7 @@ spring:
         max-attempts: 1
       openai:
         api-key: ${OPENAI_API_KEY}
-        base-url: https//api.openai.com
+        base-url: https://api.openai.com
         chat:
           options:
             model: gpt-4o
