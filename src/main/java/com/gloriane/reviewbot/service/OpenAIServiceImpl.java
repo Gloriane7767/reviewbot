@@ -1,23 +1,31 @@
 package com.gloriane.reviewbot.service;
 
 import com.gloriane.reviewbot.dto.ApplicationRequest;
-import com.gloriane.reviewbot.dto.ReviewResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiImageModel;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
     private final ChatClient chatClient;
+    private final OpenAiChatModel openAiChatModel;
+    private final OpenAiImageModel openAiImageModel;
 
-    public OpenAIServiceImpl(ChatClient chatClient) {
+    public OpenAIServiceImpl(ChatClient chatClient, OpenAiChatModel openAiChatModel, OpenAiImageModel openAiImageModel) {
         this.chatClient = chatClient;
+        this.openAiChatModel = openAiChatModel;
+        this.openAiImageModel = openAiImageModel;
     }
 
     @Override
-    public ReviewResponse generateApplicationReview(ApplicationRequest request) {
+    public String reviewApplication(ApplicationRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
@@ -32,42 +40,50 @@ public class OpenAIServiceImpl implements OpenAIService {
                         Analyze the candidate application carefully.
 
                         RULES:
-                        1. Decide if the candidate should be Accepted or Rejected.
-                        2. Give short constructive feedback.
-                        3. Generate a professional email response.
-                        4. Be encouraging and professional.
-                        5. Return ONLY valid JSON.
-                        6. Do not include markdown.
-                        7. Do not explain the JSON.
-
-                        RESPONSE FORMAT:
-                        {
-                          "decision": "Accepted or Rejected",
-                          "feedback": "Short feedback",
-                          "emailResponse": "Professional email"
-                        }
+                        - Evaluate candidates based on their background, experience, motivation, and skills.
+                        - Decide if the candidate should be Accepted or Rejected.
+                        - Give short constructive feedback.
+                        - Generate a professional email response.
+                        - Be encouraging and professional.
                         """)
                 .build();
 
-        UserMessage userMessage = UserMessage.builder()
-                .text("""
-                        Name: %s
-                        Background: %s
-                        Experience: %s
-                        Motivation: %s
-                        Skills: %s
-                        """.formatted(
-                        request.name(),
-                        request.background(),
-                        request.experience(),
-                        request.motivation(),
-                        request.skills()
-                ))
-                .build();
+        String userInput = String.format("""
+                    Review this application:
+                    Name: %s
+                    Background: %s
+                    Experience: %s
+                    Motivation: %s
+                    Skills: %s
 
-        return chatClient.prompt()
-                .messages(systemMessage, userMessage)
-                .call()
-                .entity(ReviewResponse.class);
+                    Respond with:
+                    1. Decision: Accepted / Rejected
+                    2. Professional email to the candidate
+                    3. Short feedback (2-3 sentences)
+                    """,
+                request.name(),
+                request.background(),
+                request.experience(),
+                request.motivation(),
+                request.skills()
+        );
+
+        Prompt prompt = Prompt.builder()
+                .messages(systemMessage, new UserMessage(userInput))
+                .chatOptions(ChatOptions.builder()
+                        .model("gpt-4o")
+                        .maxTokens(1500)
+                        .temperature(0.4)
+                        .build())
+                .build(
+        );
+
+        ChatResponse response = openAiChatModel.call(prompt);
+        String content = response.getResult() != null
+                ? response.getResult()
+                .getOutput()
+                .getText()
+                : "No response from OpenAI model";
+        return (content != null) ? content : "No response from OpenAI model";
     }
 }
