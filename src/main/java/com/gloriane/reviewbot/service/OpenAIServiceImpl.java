@@ -1,27 +1,21 @@
 package com.gloriane.reviewbot.service;
 
 import com.gloriane.reviewbot.dto.ApplicationRequest;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiImageModel;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
-    private final ChatClient chatClient;
     private final OpenAiChatModel openAiChatModel;
-    private final OpenAiImageModel openAiImageModel;
 
-    public OpenAIServiceImpl(ChatClient chatClient, OpenAiChatModel openAiChatModel, OpenAiImageModel openAiImageModel) {
-        this.chatClient = chatClient;
+    public OpenAIServiceImpl(OpenAiChatModel openAiChatModel) {
         this.openAiChatModel = openAiChatModel;
-        this.openAiImageModel = openAiImageModel;
     }
 
     @Override
